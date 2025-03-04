@@ -1,0 +1,368 @@
+import '/auth/firebase_auth/auth_util.dart';
+import '/backend/backend.dart';
+import '/flutter_flow/flutter_flow_icon_button.dart';
+import '/flutter_flow/flutter_flow_theme.dart';
+import '/flutter_flow/flutter_flow_toggle_icon.dart';
+import '/flutter_flow/flutter_flow_util.dart';
+import 'dart:ui';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+
+import 'comment_model.dart';
+export 'comment_model.dart';
+
+class CommentWidget extends StatefulWidget {
+  const CommentWidget({
+    super.key,
+    required this.userToCommnet,
+  });
+
+  final DocumentReference? userToCommnet;
+
+  @override
+  State<CommentWidget> createState() => _CommentWidgetState();
+}
+
+class _CommentWidgetState extends State<CommentWidget> {
+  late CommentModel _model;
+
+  @override
+  void setState(VoidCallback callback) {
+    super.setState(callback);
+    _model.onUpdate();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _model = createModel(context, () => CommentModel());
+
+    _model.textController ??= TextEditingController();
+    _model.textFieldFocusNode ??= FocusNode();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _model.maybeDispose();
+
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: MediaQuery.sizeOf(context).width,
+      height: 400,
+      decoration: BoxDecoration(
+        color: FlutterFlowTheme.of(context).secondaryBackground,
+      ),
+      child: SingleChildScrollView(
+        primary: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Container(
+              height: 350,
+              decoration: BoxDecoration(),
+              child: Padding(
+                padding: EdgeInsetsDirectional.fromSTEB(8, 8, 8, 0),
+                child: StreamBuilder<List<CommentRecord>>(
+                  stream: queryCommentRecord(
+                    parent: widget!.userToCommnet,
+                    queryBuilder: (commentRecord) =>
+                        commentRecord.orderBy('created_time', descending: true),
+                  ),
+                  builder: (context, snapshot) {
+                    // Customize what your widget looks like when it's loading.
+                    if (!snapshot.hasData) {
+                      return Center(
+                        child: SizedBox(
+                          width: 50,
+                          height: 50,
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              FlutterFlowTheme.of(context).primary,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                    List<CommentRecord> listViewCommentRecordList =
+                        snapshot.data!;
+
+                    return ListView.builder(
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      scrollDirection: Axis.vertical,
+                      itemCount: listViewCommentRecordList.length,
+                      itemBuilder: (context, listViewIndex) {
+                        final listViewCommentRecord =
+                            listViewCommentRecordList[listViewIndex];
+                        return StreamBuilder<UsersRecord>(
+                          stream: UsersRecord.getDocument(
+                              listViewCommentRecord.commentUser!),
+                          builder: (context, snapshot) {
+                            // Customize what your widget looks like when it's loading.
+                            if (!snapshot.hasData) {
+                              return Center(
+                                child: SizedBox(
+                                  width: 50,
+                                  height: 50,
+                                  child: CircularProgressIndicator(
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      FlutterFlowTheme.of(context).primary,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+
+                            final rowUsersRecord = snapshot.data!;
+
+                            return Row(
+                              mainAxisSize: MainAxisSize.max,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Flexible(
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.max,
+                                    children: [
+                                      Container(
+                                        width: 40,
+                                        height: 40,
+                                        clipBehavior: Clip.antiAlias,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Image.network(
+                                          rowUsersRecord.photoUrl,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                      Flexible(
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.max,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Padding(
+                                              padding: EdgeInsetsDirectional
+                                                  .fromSTEB(0, 0, 0, 8),
+                                              child: Text(
+                                                rowUsersRecord.email,
+                                                style:
+                                                    FlutterFlowTheme.of(context)
+                                                        .bodyMedium
+                                                        .override(
+                                                          fontFamily: 'Inter',
+                                                          letterSpacing: 0.0,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                        ),
+                                              ),
+                                            ),
+                                            Text(
+                                              listViewCommentRecord.content,
+                                              style:
+                                                  FlutterFlowTheme.of(context)
+                                                      .bodyMedium
+                                                      .override(
+                                                        fontFamily: 'Inter',
+                                                        letterSpacing: 0.0,
+                                                      ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ].divide(SizedBox(width: 8)),
+                                  ),
+                                ),
+                                Column(
+                                  mainAxisSize: MainAxisSize.max,
+                                  children: [
+                                    ToggleIcon(
+                                      onPressed: () async {
+                                        final likesElement =
+                                            currentUserReference;
+                                        final likesUpdate =
+                                            listViewCommentRecord.likes
+                                                    .contains(likesElement)
+                                                ? FieldValue.arrayRemove(
+                                                    [likesElement])
+                                                : FieldValue.arrayUnion(
+                                                    [likesElement]);
+                                        await listViewCommentRecord.reference
+                                            .update({
+                                          ...mapToFirestore(
+                                            {
+                                              'likes': likesUpdate,
+                                            },
+                                          ),
+                                        });
+                                        if (listViewCommentRecord.likes
+                                                .contains(
+                                                    currentUserReference) ==
+                                            true) {
+                                          await listViewCommentRecord.reference
+                                              .update({
+                                            ...mapToFirestore(
+                                              {
+                                                'likes': FieldValue.arrayRemove(
+                                                    [currentUserReference]),
+                                              },
+                                            ),
+                                          });
+                                        } else {
+                                          await listViewCommentRecord.reference
+                                              .update({
+                                            ...mapToFirestore(
+                                              {
+                                                'likes': FieldValue.arrayUnion(
+                                                    [currentUserReference]),
+                                              },
+                                            ),
+                                          });
+                                        }
+                                      },
+                                      value: listViewCommentRecord.likes
+                                          .contains(currentUserReference),
+                                      onIcon: Icon(
+                                        Icons.favorite_sharp,
+                                        color: FlutterFlowTheme.of(context)
+                                            .primary,
+                                        size: 24,
+                                      ),
+                                      offIcon: Icon(
+                                        Icons.favorite_border,
+                                        color: FlutterFlowTheme.of(context)
+                                            .secondaryText,
+                                        size: 24,
+                                      ),
+                                    ),
+                                    Text(
+                                      valueOrDefault<String>(
+                                        listViewCommentRecord.likes.length
+                                            .toString(),
+                                        '0',
+                                      ),
+                                      style: FlutterFlowTheme.of(context)
+                                          .bodyMedium
+                                          .override(
+                                            fontFamily: 'Inter',
+                                            letterSpacing: 0.0,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsetsDirectional.fromSTEB(0, 0, 0, 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.max,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Container(
+                      width: 200,
+                      child: TextFormField(
+                        controller: _model.textController,
+                        focusNode: _model.textFieldFocusNode,
+                        autofocus: false,
+                        obscureText: false,
+                        decoration: InputDecoration(
+                          isDense: true,
+                          labelStyle:
+                              FlutterFlowTheme.of(context).labelMedium.override(
+                                    fontFamily: 'Inter',
+                                    letterSpacing: 0.0,
+                                  ),
+                          hintText: '댓글을 입력해주세요.',
+                          hintStyle:
+                              FlutterFlowTheme.of(context).labelMedium.override(
+                                    fontFamily: 'Inter',
+                                    letterSpacing: 0.0,
+                                  ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Color(0x00000000),
+                              width: 1,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Color(0x00000000),
+                              width: 1,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: FlutterFlowTheme.of(context).error,
+                              width: 1,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          focusedErrorBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: FlutterFlowTheme.of(context).error,
+                              width: 1,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          filled: true,
+                          fillColor:
+                              FlutterFlowTheme.of(context).secondaryBackground,
+                        ),
+                        style: FlutterFlowTheme.of(context).bodyMedium.override(
+                              fontFamily: 'Inter',
+                              letterSpacing: 0.0,
+                            ),
+                        cursorColor: FlutterFlowTheme.of(context).primaryText,
+                        validator:
+                            _model.textControllerValidator.asValidator(context),
+                      ),
+                    ),
+                  ),
+                  FlutterFlowIconButton(
+                    borderRadius: 8,
+                    buttonSize: 40,
+                    icon: Icon(
+                      Icons.upload,
+                      color: FlutterFlowTheme.of(context).primary,
+                      size: 24,
+                    ),
+                    onPressed: () async {
+                      await CommentRecord.createDoc(widget!.userToCommnet!)
+                          .set(createCommentRecordData(
+                        content: _model.textController.text,
+                        createdTime: getCurrentTimestamp,
+                        commentUser: currentUserReference,
+                      ));
+                      safeSetState(() {
+                        _model.textController?.clear();
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
